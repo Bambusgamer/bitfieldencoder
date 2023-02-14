@@ -1,4 +1,4 @@
-# bitfield-encoder
+# bitfieldencoder
 
 A JavaScript library for encoding and decoding data into a single bitfield. The library allows you to define an encoding schema that maps keys to their data types and number of bits, then use that schema to pack and unpack your data into a single number.
 
@@ -7,7 +7,7 @@ A JavaScript library for encoding and decoding data into a single bitfield. The 
 To install bitfield-encoder in your project, run the following command in your terminal:
 
 ```bash
-npm install bitfield-encoder
+npm install bitfieldencoder
 ```
 
 ## Usage
