@@ -26,7 +26,7 @@ const schema = {
 const encoder = new BitfieldEncoder(schema);
 
 const data = { a: true, b: 15, c: 31 };
-const packedData = encoder.encode(data); // 195
+const packedData = encoder.encode(data); // 1023
 const unpackedData = encoder.decode(packedData); // { a: true, b: 15, c: 31 }
 ```
 
