@@ -36,9 +36,5 @@ You can then use the encode method on the BitfieldEncoder instance to pack your 
 
 ## Limitations
 
-The maximum number of bits that can be used in the encoding schema is 32.
-The library does not support floating point numbers.
-
-## License
-
-This library is released under the MIT license. You can find the full license text in the LICENSE file in the repository.
+- The maximum number of bits that can be used in the encoding schema is 32.
+- The library does not support floating point numbers.
