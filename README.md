@@ -15,7 +15,7 @@ npm install bitfieldencoder
 The library exports a single class, BitfieldEncoder, that you can use to define your encoding schema and perform the encoding and decoding. Here's an example of how you could use the library to pack and unpack some data:
 
 ```javascript
-const BitfieldEncoder = require('bitfield-encoder');
+const BitfieldEncoder = require('bitfieldencoder');
 
 const schema = {
 	a: { type: Boolean },
