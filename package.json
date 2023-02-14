@@ -1,5 +1,5 @@
 {
-	"name": "@bambusgamer/bitfieldencoder",
+	"name": "bitfieldencoder",
 	"version": "1.0.0",
 	"description": "A simple library for encoding and decoding data into a single bitfield based on a provided schema.",
 	"main": "src/index.js",
