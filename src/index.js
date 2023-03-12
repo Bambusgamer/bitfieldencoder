@@ -97,6 +97,52 @@ class BitfieldEncoder {
         };
         return result;
     }
+
+    /**
+     * @typedef {Object} BitfieldEncoder~Index
+     * @property {number} start - The start index of the data
+     * @property {number} end - The end index of the data
+     * @property {number} numBits - The number of bits of the data
+     * @property {number} mask - The mask for the data
+     * @property {number} shift - The shift for the data
+     * @property {number} max - The maximum value for the data
+     * @property {number} min - The minimum value for the data
+     * @property {type} type - The type of the data
+     */
+
+    /**
+     * Returns the index for where the given key's data starts and ends in the packed data
+     * @param {string} key - The key to get the index for
+     * @returns {Object} - An object with the start and end indices
+     */
+    getIndex(key) {
+        if (typeof key !== "string") {
+            throw new TypeError("Key must be a string");
+        };
+        if (!(key in this.encodingSchema)) {
+            throw new Error(`Key "${key}" is not in the encoding schema`);
+        };
+
+        const { type, numBits = type === Boolean ? 1 : 0 } = this.encodingSchema[key];
+        let start = 0;
+        for (const [otherKey, { type: otherType, numBits: otherNumBits = otherType === Boolean ? 1 : 0 }] of Object.entries(this.encodingSchema)) {
+            if (otherKey === key) {
+                break;
+            };
+            start += otherNumBits;
+        };
+
+        return {
+            start,
+            end: start + numBits,
+            numBits,
+            mask: (1 << numBits) - 1,
+            shift: 32 - numBits,
+            max: (1 << numBits) - 1,
+            min: 0,
+            type
+        };
+    }
 }
 
 module.exports = BitfieldEncoder;

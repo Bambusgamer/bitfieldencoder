@@ -26,8 +26,14 @@ const schema = {
 const encoder = new BitfieldEncoder(schema);
 
 const data = { a: true, b: 15, c: 31 };
-const packedData = encoder.encode(data); // 1023
-const unpackedData = encoder.decode(packedData); // { a: true, b: 15, c: 31 }
+const packedData = encoder.encode(data);
+// 1023
+
+encoder.decode(packedData);
+// { a: true, b: 15, c: 31 }
+
+encoder.getIndex('b');
+// { start: 1, end: 5, numBits: 4, mask: 15, shift: 28, max: 15, min: 0, type: Number }
 ```
 
 Note that the schema you define should map keys to objects that specify the type (either Boolean or Number) and the numBits for numbers.
