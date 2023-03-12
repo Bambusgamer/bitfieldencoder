@@ -1,6 +1,6 @@
 # bitfield-encoder
 
-A JavaScript library for encoding and decoding data into a single bitfield. The library allows you to define an encoding schema that maps keys to their data types and number of bits, then use that schema to pack and unpack your data into a single number.
+A JavaScript library for encoding and decoding data into a single bitfield. The library allows you to define an encoding schema that maps keys to their data types and number of bits, then use that schema to pack and unpack your data into a single number. It makes bitfield storage and manipulation easy.
 
 ## Installation
 
@@ -32,6 +32,12 @@ const packedData = encoder.encode(data);
 encoder.decode(packedData);
 // { a: true, b: 15, c: 31 }
 
+const manipulatedData = encoder.manipulate(packedData, { b: 0, c: 5 });
+// 161
+
+encoder.decode(manipulatedData);
+// { a: true, b: 0, c: 5 }
+
 encoder.getIndex('b');
 // { start: 1, end: 5, numBits: 4, mask: 15, shift: 28, max: 15, min: 0, type: Number }
 ```
@@ -42,5 +48,9 @@ You can then use the encode method on the BitfieldEncoder instance to pack your 
 
 ## Limitations
 
-- The maximum number of bits that can be used in the encoding schema is 32.
-- The library does not support floating point numbers.
+- The maximum number of bits that can be used in one schema is 52.
+- A single key can only have a maximum value of 51.
+
+```
+
+```

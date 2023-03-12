@@ -1,6 +1,6 @@
 {
 	"name": "bitfield-encoder",
-	"version": "1.2.0",
+	"version": "1.2.1",
 	"description": "A simple library for encoding and decoding data into a single bitfield based on a provided schema.",
 	"main": "src/index.js",
 	"author": "Bambusgamer",

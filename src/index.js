@@ -17,8 +17,8 @@ class BitfieldEncoder {
             if (type === Number && !numBits) {
                 throw new Error(`Number of bits for key "${key}" must be specified`);
             };
-            if (type === Number && (numBits < 0 || numBits > 32)) {
-                throw new Error(`Number of bits for key "${key}" must be between 0 and 32`);
+            if (type === Number && (numBits < 0 || numBits > 51)) {
+                throw new Error(`Number of bits for key "${key}" must be between 1 and 51`);
             };
             if (type === Number && (numBits % 1 !== 0)) {
                 throw new Error(`Number of bits for key "${key}" must be an integer`);
@@ -28,8 +28,8 @@ class BitfieldEncoder {
             };
             totalNumBits += numBits || 1;
         };
-        if (totalNumBits > 32) {
-            throw new Error(`Total number of bits must not exceed 32`);
+        if (totalNumBits > 52) {
+            throw new Error(`Total number of bits must not exceed 52`);
         };
 
         this.encodingSchema = encodingSchema;
@@ -99,6 +99,50 @@ class BitfieldEncoder {
     }
 
     /**
+     * Manipulates packed data with an object of keys
+     * @param {number} packedData - The packed data as a number
+     * @param {Object} data - An object whose keys match the keys in the encoding schema and whose values are of the corresponding types
+     * @returns {number} - The new packed data as a number
+     */
+    manipulate(packedData, data) {
+        if (typeof packedData !== "number") {
+            throw new TypeError("Packed data must be a number");
+        };
+
+        let newPackedData = packedData;
+        let offset = 0;
+        for (const [key, { type, numBits = type === Boolean ? 1 : 0 }] of Object.entries(this.encodingSchema)) {
+            if (!(key in data)) {
+                offset += numBits;
+                continue;
+            };
+
+            let value = data[key];
+            if (type === Boolean) {
+                if (typeof value !== "boolean") {
+                    throw new TypeError(`Value for key "${key}" must be a boolean`);
+                };
+                value = value ? 1 : 0;
+            } else if (type === Number) {
+                if (typeof value !== "number") {
+                    throw new TypeError(`Value for key "${key}" must be a number`);
+                };
+                if (value < 0 || value >= (1 << numBits)) {
+                    throw new Error(`Value for key "${key}" is outside of allowed range [0, ${(1 << numBits) - 1}]`);
+                };
+            } else {
+                throw new Error(`Unsupported data type "${type.name}" for key "${key}"`);
+            };
+
+            const mask = ((1 << numBits) - 1) << offset;
+            newPackedData &= ~mask; // Clear the bits to be replaced
+            newPackedData |= value << offset; // Set the new bits
+            offset += numBits;
+        };
+        return newPackedData;
+    }
+
+    /**
      * @typedef {Object} BitfieldEncoder~Index
      * @property {number} start - The start index of the data
      * @property {number} end - The end index of the data
@@ -137,7 +181,7 @@ class BitfieldEncoder {
             end: start + numBits,
             numBits,
             mask: (1 << numBits) - 1,
-            shift: 32 - numBits,
+            shift: 52 - numBits,
             max: (1 << numBits) - 1,
             min: 0,
             type
