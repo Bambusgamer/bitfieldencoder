@@ -50,7 +50,3 @@ You can then use the encode method on the BitfieldEncoder instance to pack your 
 
 - The maximum number of bits that can be used in one schema is 52.
 - A single key can only have a maximum value of 51.
-
-```
-
-```
