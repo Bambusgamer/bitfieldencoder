@@ -1,17 +1,11 @@
-interface BitfieldEncoderSchema {
-    [key: string]: {
-        type: BooleanConstructor | NumberConstructor;
-        numBits?: number;
-    };
+type obj<T = unknown | any> = Record<string | unknown | any, T>;
+
+interface BitfieldEncoderSchemaItem {
+    type: NumberConstructor | BooleanConstructor;
+    numBits?: number;
 }
 
-interface DecodedData {
-    [key: string]: boolean | number;
-}
-
-interface ManipulationData {
-    [key: string]: boolean | number;
-}
+type DataItem = number | boolean;
 
 interface Index {
     start: number;
@@ -28,9 +22,9 @@ interface Index {
  * Class for encoding and decoding data into a single bitfield
  */
 class BitfieldEncoder {
-    encodingSchema: BitfieldEncoderSchema;
+    encodingSchema: obj<BitfieldEncoderSchemaItem>;
 
-    constructor(encodingSchema: BitfieldEncoderSchema) {
+    constructor(encodingSchema: obj<BitfieldEncoderSchemaItem>) {
         if (typeof encodingSchema !== 'object') {
             throw new TypeError('Encoding schema must be an object');
         }
@@ -64,7 +58,7 @@ class BitfieldEncoder {
     /**
      * Encodes the given data into a single bitfield
      */
-    encode(data: DecodedData): number {
+    encode(data: obj<DataItem>): number {
         if (typeof data !== 'object') {
             throw new TypeError('Data must be an object');
         }
@@ -104,12 +98,12 @@ class BitfieldEncoder {
      * @param {number} packedData - The packed data as a number
      * @returns {Object} - An object whose keys match the keys in the encoding schema and whose values are of the corresponding types
      */
-    decode(packedData: number): DecodedData {
+    decode(packedData: number): obj<DataItem> {
         if (typeof packedData !== 'number') {
             throw new TypeError('Packed data must be a number');
         }
 
-        const result: DecodedData = {};
+        const result: obj<DataItem> = {};
         let offset = 0;
         for (const [key, { type, numBits = type === Boolean ? 1 : 0 }] of Object.entries(this.encodingSchema)) {
             let value: number | boolean = (packedData >> offset) & ((1 << numBits) - 1);
@@ -125,7 +119,7 @@ class BitfieldEncoder {
     /**
      * Manipulates packed data with an object of keys and values
      */
-    manipulate(packedData: number, data: ManipulationData): number {
+    manipulate(packedData: number, data: obj<DataItem>): number {
         if (typeof packedData !== 'number') {
             throw new TypeError('Packed data must be a number');
         }
