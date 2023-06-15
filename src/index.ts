@@ -1,12 +1,3 @@
-type obj<T = unknown | any> = Record<string | unknown | any, T>;
-
-interface BitfieldEncoderSchemaItem {
-    type: NumberConstructor | BooleanConstructor;
-    numBits?: number;
-}
-
-type DataItem = number | boolean;
-
 interface Index {
     start: number;
     end: number;
@@ -18,13 +9,36 @@ interface Index {
     type: NumberConstructor | BooleanConstructor;
 }
 
-/**
- * Class for encoding and decoding data into a single bitfield
- */
-class BitfieldEncoder {
-    encodingSchema: obj<BitfieldEncoderSchemaItem>;
+interface SchemaItem {
+    type: NumberConstructor | BooleanConstructor;
+    numBits?: number;
+}
 
-    constructor(encodingSchema: obj<BitfieldEncoderSchemaItem>) {
+type Schema = Record<string, SchemaItem>;
+
+type DataItem<TSchemaItem extends SchemaItem> = TSchemaItem['type'] extends NumberConstructor
+    ? number
+    : TSchemaItem['type'] extends BooleanConstructor
+    ? boolean
+    : never;
+
+class ExtendTypeError extends TypeError {
+    constructor(message: string, replacements: string[]) {
+        let replaced = message;
+        for (let i = 0; i < replacements.length; i++) {
+            replaced = replaced.replace(`{${i + 1}}`, replacements[i]);
+        }
+        super(replaced);
+    }
+}
+
+/**
+ * @description Class for encoding, decoding and manipulating data in a bitfield
+ */
+class BitfieldEncoder<TSchema extends Schema> {
+    encodingSchema: TSchema;
+
+    constructor(encodingSchema: TSchema) {
         if (typeof encodingSchema !== 'object') {
             throw new TypeError('Encoding schema must be an object');
         }
@@ -32,19 +46,23 @@ class BitfieldEncoder {
         let totalNumBits = 0;
         for (const [key, { type, numBits }] of Object.entries(encodingSchema)) {
             if (type !== Boolean && type !== Number) {
-                throw new TypeError(`Type for key "${key}" must be a boolean or number`);
+                throw new ExtendTypeError('Type for key "{1}" must be a boolean or number', [key]);
             }
-            if (type === Number && !numBits) {
-                throw new Error(`Number of bits for key "${key}" must be specified`);
-            }
-            if (type === Number && numBits && (numBits < 0 || numBits > 51)) {
-                throw new Error(`Number of bits for key "${key}" must be between 1 and 51`);
-            }
-            if (type === Number && numBits && numBits % 1 !== 0) {
-                throw new Error(`Number of bits for key "${key}" must be an integer`);
+            if (type === Number) {
+                if (typeof numBits !== 'number') {
+                    throw new ExtendTypeError(`Number of bits for key "{1}" must be specified`, [key]);
+                }
+                if (numBits <= 0 || numBits > 51) {
+                    throw new ExtendTypeError(`Number of bits for key "{1}" must be between 1 and 51`, [key]);
+                }
+                if (numBits % 1 !== 0) {
+                    throw new ExtendTypeError(`Number of bits for key "{1}" must be an integer`, [key]);
+                }
             }
             if (type === Boolean && numBits) {
-                throw new Error(`Number of bits for key "${key}" must not be specified for boolean types`);
+                throw new ExtendTypeError(`Number of bits for key "{1}" must not be specified for boolean types`, [
+                    key,
+                ]);
             }
             totalNumBits += numBits || 1;
         }
@@ -56,9 +74,9 @@ class BitfieldEncoder {
     }
 
     /**
-     * Encodes the given data into a single bitfield
+     * @description Encodes the given data into a single bitfield
      */
-    encode(data: obj<DataItem>): number {
+    encode<KSchema extends keyof TSchema>(data: { [P in KSchema]: DataItem<TSchema[P]> }): number {
         if (typeof data !== 'object') {
             throw new TypeError('Data must be an object');
         }
@@ -67,24 +85,35 @@ class BitfieldEncoder {
         let offset = 0;
         for (const [key, { type, numBits = type === Boolean ? 1 : 0 }] of Object.entries(this.encodingSchema)) {
             if (!(key in data)) {
-                throw new Error(`Data is missing key "${key}"`);
+                throw new ExtendTypeError(`Data is missing key "{1}"`, [key]);
+            }
+            if (typeof data[key as KSchema] !== 'boolean' && typeof data[key as KSchema] !== 'number') {
+                throw new ExtendTypeError(`Value for key "{1}" must be a boolean or number`, [key]);
             }
 
-            let value = data[key];
+            const currentValue = data[key as KSchema];
+            let value: number;
             if (type === Boolean) {
-                if (typeof value !== 'boolean') {
-                    throw new TypeError(`Value for key "${key}" must be a boolean`);
+                if (typeof currentValue !== 'boolean') {
+                    throw new ExtendTypeError(`Value for key "{1}" must be a boolean`, [key]);
                 }
-                value = value ? 1 : 0;
+                value = currentValue ? 1 : 0;
             } else if (type === Number) {
-                if (typeof value !== 'number') {
-                    throw new TypeError(`Value for key "${key}" must be a number`);
+                if (typeof currentValue !== 'number') {
+                    throw new ExtendTypeError(`Value for key "{1}" must be a number`, [key]);
                 }
-                if (value < 0 || value >= 1 << numBits) {
-                    throw new Error(`Value for key "${key}" is outside of allowed range [0, ${(1 << numBits) - 1}]`);
+                if (
+                    (type === Number && (data[key as KSchema] as number) >= 1 << numBits) ||
+                    (data[key as KSchema] as number) < 0
+                ) {
+                    throw new ExtendTypeError(`Value for key "{1}" is outside of allowed range [0, {2}]`, [
+                        key,
+                        String((1 << numBits) - 1),
+                    ]);
                 }
+                value = currentValue;
             } else {
-                throw new Error(`Unsupported data type "${type.name}" for key "${key}"`);
+                throw new ExtendTypeError(`Unsupported data type "{1}" for key "{2}"`, [type.name, key]);
             }
 
             result |= value << offset;
@@ -94,78 +123,47 @@ class BitfieldEncoder {
     }
 
     /**
-     * Decodes the given packed data into an object
-     * @param {number} packedData - The packed data as a number
-     * @returns {Object} - An object whose keys match the keys in the encoding schema and whose values are of the corresponding types
+     * @description Decodes the given packed data into an object
      */
-    decode(packedData: number): obj<DataItem> {
+    decode<KSchema extends keyof TSchema>(packedData: number): { [P in KSchema]: DataItem<TSchema[P]> } {
         if (typeof packedData !== 'number') {
             throw new TypeError('Packed data must be a number');
         }
 
-        const result: obj<DataItem> = {};
+        const result = {} as { [P in KSchema]: DataItem<TSchema[P]> };
         let offset = 0;
         for (const [key, { type, numBits = type === Boolean ? 1 : 0 }] of Object.entries(this.encodingSchema)) {
             let value: number | boolean = (packedData >> offset) & ((1 << numBits) - 1);
             if (type === Boolean) {
                 value = value !== 0;
             }
-            result[key] = value;
+            result[key as KSchema] = value as DataItem<TSchema[KSchema]>;
             offset += numBits;
         }
         return result;
     }
 
     /**
-     * Manipulates packed data with an object of keys and values
+     * @description Manipulates packed data with an object of partial data
      */
-    manipulate(packedData: number, data: obj<DataItem>): number {
-        if (typeof packedData !== 'number') {
-            throw new TypeError('Packed data must be a number');
-        }
+    manipulate<KSchema extends keyof TSchema>(
+        packedData: number,
+        data: { [P in KSchema]: DataItem<TSchema[P]> },
+    ): number {
+        const unpackedData = this.decode(packedData);
 
-        let newPackedData = packedData;
-        let offset = 0;
-        for (const [key, { type, numBits = type === Boolean ? 1 : 0 }] of Object.entries(this.encodingSchema)) {
-            if (!(key in data)) {
-                offset += numBits;
-                continue;
-            }
-
-            let value = data[key];
-            if (type === Boolean) {
-                if (typeof value !== 'boolean') {
-                    throw new TypeError(`Value for key "${key}" must be a boolean`);
-                }
-                value = value ? 1 : 0;
-            } else if (type === Number) {
-                if (typeof value !== 'number') {
-                    throw new TypeError(`Value for key "${key}" must be a number`);
-                }
-                if (value < 0 || value >= 1 << numBits) {
-                    throw new Error(`Value for key "${key}" is outside of allowed range [0, ${(1 << numBits) - 1}]`);
-                }
-            } else {
-                throw new Error(`Unsupported data type "${type.name}" for key "${key}"`);
-            }
-
-            const mask = ((1 << numBits) - 1) << offset;
-            newPackedData &= ~mask; // Clear the bits to be replaced
-            newPackedData |= value << offset; // Set the new bits
-            offset += numBits;
-        }
-        return newPackedData;
+        return this.encode({ ...unpackedData, ...data });
     }
 
     /**
-     * Returns the index for where the given key's data starts and ends in the packed data
+     * @description Returns metadata about the given key
      */
     getIndex(key: string): Index {
         if (typeof key !== 'string') {
             throw new TypeError('Key must be a string');
         }
         if (!(key in this.encodingSchema)) {
-            throw new Error(`Key "${key}" is not in the encoding schema`);
+            throw new ExtendTypeError(`Key "{1}" is not in the encoding schema`, [key]);
         }
 
         const { type, numBits = type === Boolean ? 1 : 0 } = this.encodingSchema[key];

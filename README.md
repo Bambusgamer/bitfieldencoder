@@ -1,6 +1,6 @@
 # bitfield-encoder
 
-A JavaScript library for encoding and decoding data into a single bitfield. The library allows you to define an encoding schema that maps keys to their data types and number of bits, then use that schema to pack and unpack your data into a single number. It makes bitfield storage and manipulation easy.
+A JavaScript library written in typescript for encoding and decoding data into a single bitfield. The library allows you to define an encoding schema that maps keys to their data types and number of bits, then use that schema to pack and unpack your data into a single number. It makes bitfield storage and manipulation easy.
 
 ## Installation
 
@@ -12,7 +12,7 @@ npm install bitfield-encoder
 
 ## Usage
 
-The library exports a single class, BitfieldEncoder, that you can use to define your encoding schema and perform the encoding and decoding. Here's an example of how you could use the library to pack and unpack some data:
+The library exports the class BitfieldEncoder, that you can use to define your encoding schema and perform the encoding and decoding. Here's an example of how you could use the library to pack and unpack some data:
 
 ```javascript
 const BitfieldEncoder = require('bitfield-encoder');
